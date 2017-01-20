@@ -10,6 +10,7 @@ from trytond.transaction import Transaction
 
 __all__ = ['Purchase']
 __metaclass__ = PoolMeta
+_ZERO = Decimal(0)
 
 class Purchase():
     'Purchase'
@@ -44,7 +45,6 @@ class Purchase():
                         if len(values) >1:
                             if str(values[1][2]) == str("5") and str(values[1][3] == str("0")):
                                 value = value + Decimal(0.0001)
-                        valor = round(value, 2)
                         taxes[key] = self.currency.round(value)
 
             for line in self.lines:
@@ -78,3 +78,41 @@ class Purchase():
             changes['total_amount'] = self.currency.round(
                 changes['total_amount'])
         return changes
+
+    def get_tax_amount(self):
+        pool = Pool()
+        Tax = pool.get('account.tax')
+        Invoice = pool.get('account.invoice')
+        Configuration = pool.get('account.configuration')
+
+        config = Configuration(1)
+
+        context = self.get_tax_context()
+        taxes = {}
+
+        def round_taxes():
+
+            for key, value in taxes.iteritems():
+                values = str(value).split(".")
+                if len(values) >1:
+                    if str(values[1][2]) == str("5") and str(values[1][3] == str("0")):
+                        value = value + Decimal(0.0001)
+                taxes[key] = self.currency.round(value)
+
+        for line in self.lines:
+            if line.type != 'line':
+                continue
+            with Transaction().set_context(context):
+                tax_list = Tax.compute(line.taxes, line.unit_price,
+                    line.quantity)
+            for tax in tax_list:
+                key, val = Invoice._compute_tax(tax, 'in_invoice')
+                if key not in taxes:
+                    taxes[key] = val['amount']
+                else:
+                    taxes[key] += val['amount']
+            if config.tax_rounding == 'line':
+                round_taxes()
+        if config.tax_rounding == 'document':
+            round_taxes()
+        return sum(taxes.itervalues(), _ZERO)
