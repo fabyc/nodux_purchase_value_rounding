@@ -3,8 +3,11 @@
 
 from trytond.pool import Pool
 from .purchase import *
+from .invoice import *
 
 def register():
     Pool.register(
         Purchase,
+        PurchaseLine,
+        InvoiceLine,
         module='nodux_purchase_value_rounding', type_='model')

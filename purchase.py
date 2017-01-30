@@ -8,7 +8,7 @@ from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Eval, Bool, If, PYSONEncoder, Id
 from trytond.transaction import Transaction
 
-__all__ = ['Purchase']
+__all__ = ['Purchase', 'PurchaseLine']
 __metaclass__ = PoolMeta
 _ZERO = Decimal(0)
 
@@ -116,3 +116,11 @@ class Purchase():
         if config.tax_rounding == 'document':
             round_taxes()
         return sum(taxes.itervalues(), _ZERO)
+
+class PurchaseLine:
+    __name__ = 'purchase.line'
+
+    @classmethod
+    def __setup__(cls):
+        super(PurchaseLine, cls).__setup__()
+        cls.gross_unit_price.digits = (16, 6)
